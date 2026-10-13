@@ -4,7 +4,7 @@
 #include "system/lathe_logger.h"
 
 bool controller_connected(void) {
-  [[NSRunLoop currentRunLoop]
+  [[NSRunLoop currentRunLoop] //need to fix...
       runUntilDate:[NSDate dateWithTimeIntervalSinceNow:0.1]];
   return GCController.controllers.count > 0;
 }
@@ -19,7 +19,6 @@ lathe_controller_state controller_get_state(void) {
     LATHE_ERROR("Controller was not found?",stderr);
     return state;
   }
-  
 
   GCExtendedGamepad *pad = controller.extendedGamepad;
 

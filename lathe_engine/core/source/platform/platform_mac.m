@@ -139,9 +139,10 @@ bool platform_handle_os_events(PlatformState *state)
                 //rn wasd space and esc are all I care about
                 const char* key = key_code[keyCode];
                 LATHE_DEBUG_F(nullptr, "%s key was pressed down\n",key);
-                if(strncmp(key,"ESC",3) == 0){
+                if(key != nullptr && strncmp(key,"ESC",3) == 0){
                     LATHE_DEBUG_F(nullptr,"ESC comparision passed, closing window\n");
                     mac->window.isVisible = false;
+                    //could just return false.... but may need some cleanup later...
                 }
                 break;
             //Should handle default window close event, probably best to handle here instead...
