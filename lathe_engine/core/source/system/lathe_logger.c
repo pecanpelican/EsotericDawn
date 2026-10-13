@@ -137,6 +137,8 @@ void internal_log_fmt_mes(FILE *out,lathe_log_level lvl, const char *file,
     vfprintf(out, fmt, args);
     va_end(args);
     
+    
     term_reset(out);
+    //fprintf(out, "\n");
     fflush(out);
     }
