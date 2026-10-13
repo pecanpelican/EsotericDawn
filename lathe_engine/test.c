@@ -20,10 +20,18 @@
 #include <math.h>
 
 uint64_t time_freq;
+constexpr unsigned int screen_width = 800;
+constexpr unsigned int screen_height = 600;
 
 int main(void) {
-    LATHE_INFO("Starting Vec3 Test...",nullptr);
+      char buffer[FILENAME_MAX];
     
+    if (getcwd(buffer, FILENAME_MAX) != NULL) {
+        printf("Your current working directory is:\n%s\n", buffer);
+    } else {
+        perror("getcwd() error");
+    }
+        LATHE_INFO("Starting Vec3 Test...",nullptr);
     lathe_vec3 v = {{5, 25, 5}};
     lathe_vec3 v_negated = {{-5,-25,-5}};
     v = vec3_negate(&v);
@@ -47,7 +55,7 @@ int main(void) {
     FILE *fptr;
     fptr = fopen("LogFile", "a");
     
-       lathe_mat_3x3 m = create_3x3_matrix_vec3(&d, &d, &d);
+    lathe_mat_3x3 m = create_3x3_matrix_vec3(&d, &d, &d);
     lathe_mat_3x3 m2 = create_3x3_matrix_vec3(&d, &d, &d);
     
     mat_3x3_print(&m, NULL);
@@ -76,8 +84,9 @@ int main(void) {
     
     LATHE_INFO("Ending Mat3 Test",nullptr);
     
+    LATHE_INFO("Starting Arena Test...",nullptr);
     #ifdef LATHE_HEAP_BACKING_MEMORY_TEST
-        void *backing_buf = malloc(LATHE_1KB);
+        void *backing_buf = malloc(LATHE_1KB);//platform_alloc(LATHE_1KB,true)
     #else
         unsigned char backing_buf[LATHE_1KB];
     #endif
@@ -97,14 +106,20 @@ int main(void) {
     
     printf("%p %c\n", (void *)z, *z);
     
+    
     lathe_vec3 v1 = {{2, 7, 1}};
-    lathe_vec3 v2 = {{8, 2, 8}};
+    lathe_vec3 v2 = {{8, 2, 8}};/*
+    -0.5f, -0.5f, 0.0f,
+     0.5f, -0.5f, 0.0f,
+     0.0f,  0.5f, 0.0f
+    */
     assert(vec3_dot_product(&v1, &v2) == 38.0f);
     fprintf(stderr, "dot is: %f\n", vec3_dot_product(&v1, &v2));
     // free(backing_buf); //not really needed 
     fclose(fptr);
+    LATHE_INFO("Ending Arena Test",nullptr);
     
-    LATHE_INFO("Starting Lathe Logger Test",nullptr);
+    LATHE_INFO("Starting Lathe Logger Test...",nullptr);
     
     LATHE_FATAL("This is FATAL!", nullptr);
     LATHE_WARN("This is a warning!", nullptr);
@@ -115,93 +130,89 @@ int main(void) {
     
     LATHE_INFO("Ending Lathe Logger Test",nullptr);
     
-
-    LATHE_INFO("Starting Lathe Simple Run Test",nullptr);
+    LATHE_INFO("Starting Lathe Simple Run Test...",nullptr);
     PlatformState platform = {};
     timer_init();
     
-    
-    if (!platform_start(
-            &platform,
-            nullptr,
-            0,
-            0,
-            0,
-            0)) {
+    if (!platform_start(&platform, nullptr,0,0,screen_width,screen_height)) {
         LATHE_FATAL("Platform was not able to start!", nullptr);
         return 1;
     }
     
-    //fix....
-  if(renderer_start(&platform)){
-      LATHE_INFO("Renderer was started", NULL);
-  }else{
-      LATHE_FATAL("RENDERER was not able to start!", nullptr);
-      return 1;
-  }
+    if(renderer_start(&platform)){
+        LATHE_INFO("Renderer was started", nullptr);
+    }else{
+        LATHE_FATAL("RENDERER was not able to start!", nullptr);
+        return 1;
+    }
     
     bool running = true;
-    [[maybe_unused]] lathe_controller_state controller_s = {0};
+    
+    //Pre loop setup
     double previous_frame = lathe_get_time();
     double fps_timer = previous_frame;
     uint64_t fps_frames = 0;
     const double target_fps = 75.0;
     const double target_frame_time = 1.0 / target_fps;
-    float t = 0.0f;
-    while (running) {
+    [[maybe_unused]] float t = 0.0f;
+    shader_init("./core/assets/shaders/quad.vert", "./core/assets/shaders/shader.frag");
     
-    double frame_start = lathe_get_time();
-    
-    running = platform_handle_os_events(&platform);
-    
-    //update
-    // if(controller_print_buttons()){  //tanks the frame rate! need to use this loop not another...
-    //     LATHE_INFO_F(nullptr,"Controller is connected\n");
-    // }
-    controller_print_buttons();
-    
-    //render a new frame
-   
-    float red   = (sinf(t)        + 1.0f) / 2.0f;
-    float green = (sinf(t + 2.0f) + 1.0f) / 2.0f;
-    float blue  = (sinf(t + 4.0f) + 1.0f) / 2.0f;
-
-    renderer_begin_frame();
-
-    renderer_clear(
-        red,
-        green,
-        blue,
-        1.0f
-    );
-    renderer_end_frame();
-      t += 0.01f;
-    fps_frames++;
-    
-    double now = lathe_get_time();
-    double fps_elapsed = now - fps_timer;
-    
-    // Print FPS 30 times per second
-    if (fps_elapsed >= 1.0 / 30.0) {
-        double fps = (double)fps_frames / fps_elapsed;
-    
-        LATHE_INFO_F(nullptr,"FPS: %.2f\r FPS:\r", fps);
-    
-        fps_frames = 0;
-        fps_timer = now;
-    }
-    
-    //limit framerate
-    double frame_time = lathe_get_time() - frame_start;
-    
-    if (frame_time < target_frame_time) {
-        double remaining = target_frame_time - frame_time;
-        usleep((useconds_t)((uint64_t)(remaining * 1000000.0)));
-    }
-    
-    previous_frame = frame_start;
+    //Main Loop
+    while (running) { 
+        double frame_start = lathe_get_time();
+        
+        running = platform_handle_os_events(&platform);
+        
+        //update
+        controller_print_buttons();
+        
+        //render a new frame
+        float red   = (sinf(t)        + 1.0f) / 2.0f;
+        float green = (sinf(t + 2.0f) + 1.0f) / 2.0f;
+        float blue  = (sinf(t + 4.0f) + 1.0f) / 2.0f;   
+        float alpha = 1.0f;
+        
+        renderer_begin_frame();
+        
+        lathe_vec3 a = {{-0.5f, -0.5f, 0.0f}};
+        lathe_vec3 b = {{0.5f, -0.5, 0.0f}};
+        lathe_vec3 c = {{0.0f, 0.5f, 0.0f}};
+        
+         renderer_clear(red,green,blue,alpha);
+        renderer_render_triangle(&a,&b,&c);
+      
+        
+        renderer_end_frame();
+        
+        t += 0.01f;
+        fps_frames++;
+        
+        double now = lathe_get_time();
+        double fps_elapsed = now - fps_timer;
+        
+        // Print FPS 30 times per second
+        //turn into method...
+        if (fps_elapsed >= 1.0 / 30.0) {
+            double fps = (double)fps_frames / fps_elapsed;
+            LATHE_INFO_F(nullptr,"FPS: %.2f\r FPS:\r", fps);
+            fps_frames = 0;
+            fps_timer = now;
+        }
+        
+        //limit framerate
+        double frame_time = lathe_get_time() - frame_start;
+        
+        if (frame_time < target_frame_time) {
+            double remaining = target_frame_time - frame_time;
+            usleep((useconds_t)((uint64_t)(remaining * 1000000.0)));
+        }
+        
+        previous_frame = frame_start;
     }  
+    
     renderer_shutdown();
     platform_shutdown(&platform);
     LATHE_INFO("Ending Lathe Simple Run Test",nullptr);
-    }
+    
+    LATHE_INFO("Test Completed",nullptr);
+}
