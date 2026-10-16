@@ -179,7 +179,7 @@ void *platform_alloc(uint64_t size, bool aligned)
     constexpr size_t alignment = 16; // NOTE: sizeof(void *)  MIN and power of 2
 
     void *block = NULL;
-
+    //aligned_alloc should be used instead -> TODO
     if (posix_memalign(&block, alignment, (size_t)size) != 0) {
         return nullptr;
     }

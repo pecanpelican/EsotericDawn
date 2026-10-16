@@ -21,7 +21,7 @@ uintptr_t align_foward(uintptr_t ptr, size_t align) {
     p = ptr;
     a = (uintptr_t)align;
     // https://graphics.stanford.edu/~seander/bithacks.html#ModulusDivisionEasy
-    modulo = p & (a - 1); // p mod a quick
+    modulo = p & (a - 1); // p mod a quick, not too sure if the compiler would do this for me...hmm... to the GodBolt Mobile!
     if (modulo != 0) {
         p += a - modulo;
     }
@@ -51,6 +51,7 @@ void *arena_alloced_align(lathe_arena *arena, size_t size, size_t align) {
     return ptr;
 }
 
+//Note, need to cast since this isnt exactly malloc
 void *arena_allocate(lathe_arena *arena, size_t size) {
     return arena_alloced_align(arena, size, LATHE_ALIGNMENT);
 }

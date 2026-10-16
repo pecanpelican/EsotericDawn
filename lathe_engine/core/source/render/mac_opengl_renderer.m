@@ -21,7 +21,6 @@ typedef struct MacPlatformState {
 //TODO: move into renderer internal state
 static NSOpenGLView *gl_view = nil;
 static NSOpenGLContext *gl_context = nil;
-//gonna do gl stuff, maybe metal another time
 static unsigned int opengl_program_id;
 
 bool renderer_start(PlatformState *state) {
@@ -85,8 +84,7 @@ bool renderer_start(PlatformState *state) {
     if (version != NULL) {
         LATHE_INFO_F(nullptr,"OpenGL Version: %s\n", (const char *)version);
     }
-    [[maybe_unused]] GLuint vert_shader_id = glCreateShader(GL_VERTEX_SHADER);
-    [[maybe_unused]] GLuint frag_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
+
     return true;
 }
 
@@ -214,7 +212,6 @@ void shader_set_int(const char* name, int value){
 void shader_set_float(const char* name, float value){
     glUniform1f(glGetUniformLocation(opengl_program_id, name), value); 
 }
-
 
 void renderer_clear(float red, float green, float blue, float alpha) {
     glClearColor(red, green, blue, alpha);
