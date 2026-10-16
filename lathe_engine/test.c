@@ -24,14 +24,8 @@ constexpr unsigned int screen_width = 800;
 constexpr unsigned int screen_height = 600;
 
 int main(void) {
-      char buffer[FILENAME_MAX];
-    
-    if (getcwd(buffer, FILENAME_MAX) != NULL) {
-        printf("Your current working directory is:\n%s\n", buffer);
-    } else {
-        perror("getcwd() error");
-    }
-        LATHE_INFO("Starting Vec3 Test...",nullptr);
+        
+    LATHE_INFO("Starting Vec3 Test...",nullptr);
     lathe_vec3 v = {{5, 25, 5}};
     lathe_vec3 v_negated = {{-5,-25,-5}};
     v = vec3_negate(&v);
@@ -136,17 +130,16 @@ int main(void) {
     
     if (!platform_start(&platform, nullptr,0,0,screen_width,screen_height)) {
         LATHE_FATAL("Platform was not able to start!", nullptr);
-        return 1;
+        return EXIT_FAILURE;
     }
     
     if(renderer_start(&platform)){
         LATHE_INFO("Renderer was started", nullptr);
     }else{
         LATHE_FATAL("RENDERER was not able to start!", nullptr);
-        return 1;
+        return EXIT_FAILURE;
     }
     
-    bool running = true;
     
     //Pre loop setup
     double previous_frame = lathe_get_time();
@@ -155,13 +148,15 @@ int main(void) {
     const double target_fps = 75.0;
     const double target_frame_time = 1.0 / target_fps;
     [[maybe_unused]] float t = 0.0f;
-    shader_init("./core/assets/shaders/quad.vert", "./core/assets/shaders/shader.frag");
+    if(!shader_init("./core/assets/shaders/shader.vert", "./core/assets/shaders/uniform.frag")){
+          LATHE_FATAL("Shaders failed to init!", nullptr);
+          return EXIT_FAILURE;
+    }
     
     //Main Loop
-    while (running) { 
+    while (platform_handle_os_events(&platform)) { 
         double frame_start = lathe_get_time();
         
-        running = platform_handle_os_events(&platform);
         
         //update
         controller_print_buttons();
@@ -170,7 +165,9 @@ int main(void) {
         float red   = (sinf(t)        + 1.0f) / 2.0f;
         float green = (sinf(t + 2.0f) + 1.0f) / 2.0f;
         float blue  = (sinf(t + 4.0f) + 1.0f) / 2.0f;   
-        float alpha = 1.0f;
+        //float alpha = 1.0f;
+        
+        lathe_vec3 color = {{red,green,blue}};
         
         renderer_begin_frame();
         
@@ -178,10 +175,9 @@ int main(void) {
         lathe_vec3 b = {{0.5f, -0.5, 0.0f}};
         lathe_vec3 c = {{0.0f, 0.5f, 0.0f}};
         
-         renderer_clear(red,green,blue,alpha);
-        renderer_render_triangle(&a,&b,&c);
+        renderer_clear(0.0f,0.0f,0.0f,1.0f);//macro for these pls...
+        renderer_render_triangle(&a,&b,&c,&color);
       
-        
         renderer_end_frame();
         
         t += 0.01f;
