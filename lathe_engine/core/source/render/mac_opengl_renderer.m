@@ -141,20 +141,15 @@ void shader_init(const char* vertex_path,const char* fragment_path)
     rewind(vertex_file);
     rewind(fragment_file);
     
-    char* v_buf = (char*)platform_alloc(vert_file_len + 1,false);
+    //TODO: Will probably just use simple stack alloc,probably less than 1mb tops...
+    v_buf = (char*)platform_alloc(vert_file_len + 1,false);
     if(v_buf == nullptr){
-        fclose(vertex_file);
-        fclose(fragment_file);
-        return;
+        goto cleanup;
     }
     
-    char* f_buf = (char*)platform_alloc(frag_file_len + 1,false);
-        if(f_buf == nullptr){
-        platform_free(v_buf,false);
-        fclose(vertex_file);
-        fclose(fragment_file);
-        
-        return;
+    f_buf = (char*)platform_alloc(frag_file_len + 1,false);
+    if(f_buf == nullptr){
+        goto cleanup;
     }
     
     const GLchar *vert_sources[] = {v_buf};
@@ -188,17 +183,46 @@ void shader_init(const char* vertex_path,const char* fragment_path)
     glLinkProgram(opengl_program_id);
     
     glGetProgramiv(opengl_program_id, GL_LINK_STATUS, &success);
-if(!success)
-{
-    glGetProgramInfoLog(opengl_program_id, 512, NULL, infoLog);
-    LATHE_FATAL("ERROR::SHADER::PROGRAM::LINKING_FAILED", nullptr);
-}
+    if(!success){
+        glGetProgramInfoLog(opengl_program_id, 512, NULL, infoLog);
+        LATHE_FATAL("ERROR::SHADER::PROGRAM::LINKING_FAILED", nullptr);
+    }
     glDeleteShader(vert);
     glDeleteShader(frag);
     
     platform_free(v_buf,false);
     platform_free(f_buf,false);
     
+    //This is not really needed... unless want to do cleanup bellow..
+    vertex_file = nullptr;
+    fragment_file = nullptr;
+    v_buf = nullptr;
+    f_buf = nullptr;
+    return true;
+
+//Ensure reverse ordering of cleanup for init
+//May look into defer macros with compiler.... will see later todo...
+cleanup:
+    if(f_buf != nullptr){
+        LATHE_DEBUG("Cleanup f_buf",nullptr);
+        platform_free(f_buf,false);
+    }
+
+    if(v_buf != nullptr){
+        LATHE_DEBUG("Cleanup v_buf",nullptr);
+        platform_free(v_buf,false);
+    }
+  
+    if(fragment_file != nullptr){
+        LATHE_DEBUG("Cleanup fragment_file",nullptr);
+        fclose(fragment_file);
+    }
+    
+    if(vertex_file != nullptr){
+        LATHE_DEBUG("Cleanup vertex_file",nullptr);
+        fclose(vertex_file);
+    }
+    return false;
 }
 void shader_use(){
     glUseProgram(opengl_program_id);
