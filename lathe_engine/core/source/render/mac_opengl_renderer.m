@@ -92,17 +92,13 @@ void renderer_begin_frame() {
     [gl_context makeCurrentContext];
 }
 
-void renderer_render_triangle(const lathe_vec3 *a,const lathe_vec3 *b,const lathe_vec3 *c){
-    //Going to turn  the vec3 into a vertices list
+void renderer_render_triangle(const lathe_vec3 *a,const lathe_vec3 *b,const lathe_vec3 *c,[[maybe_unused]]const lathe_vec3 *color){
     float vertices [] = {a->x,a->y,a->z,b->x,b->y,b->z,c->x,c->y,c->z};
-    // for(int i = 0; i < 9;i++){
-    //     printf("index %d is %f\n",i,vertices[i]);
-    // } //Good
     unsigned int VBO, VAO;
     glGenVertexArrays(1,&VAO);
     glGenBuffers(1, &VBO);  
     
-    glBindVertexArray(VAO);//first
+    glBindVertexArray(VAO);
     
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -114,22 +110,34 @@ void renderer_render_triangle(const lathe_vec3 *a,const lathe_vec3 *b,const lath
     //glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
     //glEnableVertexAttribArray(1);
     
-    // render the triangle
+    //uniform check
+    int vertexColorLocation = glGetUniformLocation(opengl_program_id,"ourColor");
+  
+    
     shader_use();
+    if(vertexColorLocation != -1){
+        glUniform4f(vertexColorLocation,color->x,color->y,color->z,1.0f);
+    }
     glBindVertexArray(VAO);
     glDrawArrays(GL_TRIANGLES, 0, 3);
-    
 }
 
-void shader_init(const char* vertex_path,const char* fragment_path)
+bool shader_init(const char* vertex_path,const char* fragment_path)
 {
-    FILE* vertex_file = fopen(vertex_path,"r");
-    FILE* fragment_file = fopen(fragment_path,"r");
+    FILE* vertex_file = nullptr;
+    FILE* fragment_file = nullptr;
+    char* v_buf = nullptr;
+    char* f_buf = nullptr;
+    
+    vertex_file = fopen(vertex_path,"r");
     if(vertex_file == nullptr){
          LATHE_FATAL("Failed to open the vertex file", nullptr);
+         goto cleanup;   
     }
+    fragment_file = fopen(fragment_path,"r");
     if(fragment_file == nullptr){
          LATHE_FATAL("Failed to open the fragment file", nullptr);
+         goto cleanup;
     }
     
     fseek(vertex_file,0,SEEK_END);
