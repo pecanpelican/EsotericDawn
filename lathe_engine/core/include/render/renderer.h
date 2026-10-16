@@ -30,7 +30,7 @@ void renderer_clear(
     float alpha
 );
 
-void renderer_render_triangle(const lathe_vec3 *a,const lathe_vec3 *b,const lathe_vec3 *c); 
+void renderer_render_triangle(const lathe_vec3 *a,const lathe_vec3 *b,const lathe_vec3 *c,[[maybe_unused]]const lathe_vec3 *color);
 
 /*
 class Shader
@@ -53,7 +53,7 @@ public:
 //So just gonna make it opengl may need to mess around to get it working with Metal and Vulkan, but one day at a time!
 //
 
-void shader_init(const char* vertex_path,const char* fragment_path);
+bool shader_init(const char* vertex_path,const char* fragment_path);
 void shader_use();
 void shader_set_bool(const char* name, bool value);
 void shader_set_int(const char* name, int value);
