@@ -31,7 +31,7 @@ void renderer_clear(
 );
 
 void renderer_render_triangle(const lathe_vec3 *a,const lathe_vec3 *b,const lathe_vec3 *c,[[maybe_unused]]const lathe_vec3 *color);
-
+void renderer_render_triangle_per_vertex(const lathe_vec3 *a,const lathe_vec3 *color_a,const lathe_vec3 *b,const lathe_vec3 *color_b,const lathe_vec3 *c,const lathe_vec3 *color_c);
 /*
 class Shader
 {

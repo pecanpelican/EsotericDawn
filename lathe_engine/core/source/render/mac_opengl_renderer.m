@@ -122,6 +122,35 @@ void renderer_render_triangle(const lathe_vec3 *a,const lathe_vec3 *b,const lath
     glDrawArrays(GL_TRIANGLES, 0, 3);
 }
 
+void renderer_render_triangle_per_vertex(const lathe_vec3 *a,const lathe_vec3 *color_a,const lathe_vec3 *b,const lathe_vec3 *color_b,const lathe_vec3 *c,const lathe_vec3 *color_c){
+    float vertices [] = {   
+        a->x,a->y,a->z,color_a->x,color_a->y,color_a->z,
+        b->x,b->y,b->z,color_b->x,color_b->y,color_b->z,
+        c->x,c->y,c->z,color_c->x,color_c->y,color_c->z
+    };
+    unsigned int VBO, VAO;
+    glGenVertexArrays(1,&VAO);
+    glGenBuffers(1, &VBO);  
+    
+    glBindVertexArray(VAO);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // color attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
+    
+    shader_use();
+    
+    glBindVertexArray(VAO);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+}
+
 bool shader_init(const char* vertex_path,const char* fragment_path)
 {
     FILE* vertex_file = nullptr;
