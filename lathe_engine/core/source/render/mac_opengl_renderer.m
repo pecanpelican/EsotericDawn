@@ -222,7 +222,8 @@ bool shader_init(const char* vertex_path,const char* fragment_path)
     glGetProgramiv(opengl_program_id, GL_LINK_STATUS, &success);
     if(!success){
         glGetProgramInfoLog(opengl_program_id, 512, NULL, infoLog);
-        LATHE_FATAL("ERROR::SHADER::PROGRAM::LINKING_FAILED", nullptr);
+        LATHE_FATAL("ERROR::SHADER::PROGRAM::LINKING_FAILED", nullptr);//infoLog
+        goto cleanup;
     }
     glDeleteShader(vert);
     glDeleteShader(frag);
