@@ -1,62 +1,104 @@
 CC := clang
 
-CFLAGS := -Icore/include \
-		  -std=c23 \
-		  -DLATHE_ARENA_POISON \
-		  -Wall \
-		  -Wextra \
-		  -Wpedantic \
-		  -Wconversion \
-		  -Werror \
-		  -DLATHE_DEBUG_ENABLED
+CPPFLAGS := -Icore/include \
+            -DLATHE_ARENA_POISON \
+            -DLATHE_DEBUG_ENABLED
 
-SRC :=	test.c \
-		core/source/math/lathe_mat3.c \
-		core/source/math/lathe_vec3.c \
-		core/source/memory/lathe_memory.c \
-		core/source/system/lathe_logger.c 
+WARNINGS := -Wall \
+            -Wextra \
+            -Wpedantic \
+            -Wconversion \
+            -Werror
 
-LIBS :=
+CFLAGS := -std=c23 $(WARNINGS)
+OBJCFLAGS := -std=c23 $(WARNINGS)
 
-#https://stackoverflow.com/a/12099167
-UNAME_S :=
+LDFLAGS :=
+LDLIBS :=
+
+CORE_SRC := core/source/math/lathe_mat3.c \
+            core/source/math/lathe_vec3.c \
+            core/source/memory/lathe_memory.c \
+            core/source/system/lathe_logger.c
+
 ifeq ($(OS),Windows_NT)
-	CFLAGS += -D LATHE_WINDOWS
+    CPPFLAGS += -DLATHE_WINDOWS
 else
-	UNAME_S := $(shell uname -s)
-	ifeq ($(UNAME_S),Linux)
-        CFLAGS += -D LATHE_LINUX
-    endif
-    ifeq ($(UNAME_S),Darwin)
-        CFLAGS += -D LATHE_OSX
-        SRC += 	core/source/system/lathe_controller.m \
-			core/source/platform/platform_mac.m  \
-			core/source/render/mac_opengl_renderer.m
-		LIBS += -framework GameController -framework Foundation -framework Cocoa -lobjc -framework OpenGL -framework QuartzCore
+    UNAME_S := $(shell uname -s)
+
+    ifeq ($(UNAME_S),Linux)
+        CPPFLAGS += -DLATHE_LINUX
+        LDLIBS += -lm
+    else ifeq ($(UNAME_S),Darwin)
+        CPPFLAGS += -DLATHE_OSX
+
+        CORE_SRC += core/source/system/lathe_controller.m \
+                    core/source/platform/platform_mac.m \
+                    core/source/render/mac_opengl_renderer.m
+
+        LDLIBS += -framework GameController \
+                  -framework Foundation \
+                  -framework Cocoa \
+                  -framework OpenGL \
+                  -framework QuartzCore \
+                  -lobjc
+    else
+        $(error Unsupported operating system: $(UNAME_S))
     endif
 endif
 
-#probably should handle if none of the above, but I just want to release on Mac,Windows, and Linux rn
+TARGET := build/main
 
-TARGET := build/test
-OBJ :=	$(SRC:.c=.o)
-OBJ := $(OBJ:.m=.o)
-# Specify the frameworks to link
+CORE_OBJ := $(addprefix build/,$(CORE_SRC))
+CORE_OBJ := $(CORE_OBJ:.c=.o)
+CORE_OBJ := $(CORE_OBJ:.m=.o)
 
+APP_OBJ := build/main.o
+OBJ := $(CORE_OBJ) $(APP_OBJ)
 
+TEST_DIR := test
+TEST_SRC := $(wildcard $(TEST_DIR)/*.c)
+TEST_OBJ := $(patsubst $(TEST_DIR)/%.c,build/tests/%.o,$(TEST_SRC))
+TEST_BINS := $(patsubst $(TEST_DIR)/%.c,$(TEST_DIR)/bin/%,$(TEST_SRC))
 
-all : $(TARGET)
+DEPS := $(OBJ:.o=.d) $(TEST_OBJ:.o=.d)
 
-$(TARGET):	$(OBJ)
-	$(CC) $(OBJ) -o $(TARGET) $(LIBS)
+.DEFAULT_GOAL := all
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+all: $(TARGET)
 
-%.o: %.m
-	$(CC) $(CFLAGS) -c $< -o $@
+$(TARGET): $(OBJ)
+	@mkdir -p "$(@D)"
+	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+$(TEST_DIR)/bin/%: build/tests/%.o $(CORE_OBJ)
+	@mkdir -p "$(@D)"
+	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+build/tests/%.o: $(TEST_DIR)/%.c
+	@mkdir -p "$(@D)"
+	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
+
+build/%.o: %.c
+	@mkdir -p "$(@D)"
+	$(CC) $(CPPFLAGS) $(CFLAGS) -MMD -MP -c $< -o $@
+
+build/%.o: %.m
+	@mkdir -p "$(@D)"
+	$(CC) $(CPPFLAGS) $(OBJCFLAGS) -MMD -MP -c $< -o $@
+
+test: $(TEST_BINS)
+	@set -e; for test_bin in $(TEST_BINS); do \
+		echo "Running $$test_bin"; \
+		"./$$test_bin"; \
+	done
 
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -rf build "$(TEST_DIR)/bin" LogFile
 
-.PHONY: all clean
+# Keep test object files between builds.
+.SECONDARY: $(TEST_OBJ)
+
+-include $(DEPS)
+
+.PHONY: all test clean
